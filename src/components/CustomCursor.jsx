@@ -1,40 +1,55 @@
 import React, { useEffect, useRef } from 'react';
 
+/**
+ * CustomCursor — renders a small dot that snaps instantly
+ * and a larger ring that follows with a gentle lag using the
+ * Web Animations API. Hidden on touch devices.
+ */
 const CustomCursor = () => {
-    const cursorDotRef = useRef(null);
-    const cursorOutlineRef = useRef(null);
+  const dotRef     = useRef(null);
+  const outlineRef = useRef(null);
 
-    useEffect(() => {
-        const handleMouseMove = (e) => {
-            const posX = e.clientX;
-            const posY = e.clientY;
+  useEffect(() => {
+    const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
+    if (isTouchDevice) return; // skip on mobile
 
-            if (cursorDotRef.current) {
-                cursorDotRef.current.style.left = `${posX}px`;
-                cursorDotRef.current.style.top = `${posY}px`;
-            }
+    const handleMove = ({ clientX: x, clientY: y }) => {
+      if (dotRef.current) {
+        dotRef.current.style.left = `${x}px`;
+        dotRef.current.style.top  = `${y}px`;
+      }
+      if (outlineRef.current) {
+        outlineRef.current.animate(
+          { left: `${x}px`, top: `${y}px` },
+          { duration: 450, fill: 'forwards', easing: 'ease-out' }
+        );
+      }
+    };
 
-            if (cursorOutlineRef.current) {
-                cursorOutlineRef.current.animate({
-                    left: `${posX}px`,
-                    top: `${posY}px`
-                }, { duration: 500, fill: "forwards" });
-            }
-        };
+    const handleOver = (e) => {
+      const isClickable = e.target.closest('a, button, [role="button"], input, textarea, select, label');
+      if (outlineRef.current) {
+        outlineRef.current.style.width           = isClickable ? '56px'                         : '36px';
+        outlineRef.current.style.height          = isClickable ? '56px'                         : '36px';
+        outlineRef.current.style.backgroundColor = isClickable ? 'rgba(139,92,246,0.12)'        : 'transparent';
+      }
+    };
 
-        window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mousemove',  handleMove,  { passive: true });
+    window.addEventListener('mouseover',  handleOver,  { passive: true });
 
-        return () => {
-            window.removeEventListener('mousemove', handleMouseMove);
-        };
-    }, []);
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseover', handleOver);
+    };
+  }, []);
 
-    return (
-        <>
-            <div className="cursor-dot" ref={cursorDotRef}></div>
-            <div className="cursor-outline" ref={cursorOutlineRef}></div>
-        </>
-    );
+  return (
+    <>
+      <div className="cursor-dot"     ref={dotRef}     aria-hidden="true" />
+      <div className="cursor-outline" ref={outlineRef} aria-hidden="true" />
+    </>
+  );
 };
 
 export default CustomCursor;
